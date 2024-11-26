@@ -8,7 +8,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 #[cfg(feature = "pairings")]
 use rand_core::RngCore;
 
-#[cfg(target_os = "zkvm")]
+#[cfg(target_vendor = "succinct")]
 use sp1_lib::{
     io::{hint_slice, read_vec},
     unconstrained,
@@ -117,7 +117,7 @@ impl Fp6 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn add_inp(&mut self, rhs: &Fp6) {
         self.c0.add_inp(&rhs.c0);
         self.c1.add_inp(&rhs.c1);
@@ -125,7 +125,7 @@ impl Fp6 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn sub_inp(&mut self, rhs: &Fp6) {
         self.c0.sub_inp(&rhs.c0);
         self.c1.sub_inp(&rhs.c1);
@@ -172,7 +172,7 @@ impl Fp6 {
     }
 
     /// Multiply by quadratic nonresidue v.
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn mul_by_nonresidue_owned(self) -> Self {
         // Given a + bv + cv^2, this produces
         //     av + bv^2 + cv^3
@@ -228,7 +228,7 @@ impl Fp6 {
 
     /// Raises this element to p.
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn frobenius_map_inp(&mut self) {
         self.c0.frobenius_map_inp();
         self.c1.frobenius_map_inp();
@@ -273,7 +273,7 @@ impl Fp6 {
     #[inline]
     fn mul_interleaved(&self, b: &Self) -> Self {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 // Implements Algorithm 13 from https://eprint.iacr.org/2010/354.pdf
                 let mut t0 = self.c0;
                 t0.mul_inp(&b.c0);

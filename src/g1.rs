@@ -24,7 +24,7 @@ cfg_if::cfg_if! {
     }
 }
 // Accelerated precompiles for zkvm. Defined directly to prevent circular dependency issues.
-#[cfg(target_os = "zkvm")]
+#[cfg(target_vendor = "succinct")]
 use sp1_lib::{bls12381::decompress_pubkey, syscall_bls12381_add, syscall_bls12381_double};
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
@@ -336,7 +336,7 @@ impl G1Affine {
     /// for details about how group elements are serialized.
     pub fn from_compressed(bytes: &[u8; 48]) -> CtOption<Self> {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 // by the y-coordinate recovery procedure in decompress_pubkey().
                 let decompressed = decompress_pubkey(bytes).unwrap();
 
@@ -354,7 +354,7 @@ impl G1Affine {
     /// API invariants may be broken.** Please consider using `from_compressed()` instead.
     pub fn from_compressed_unchecked(bytes: &[u8; 48]) -> CtOption<Self> {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 // by the y-coordinate recovery procedure in decompress_pubkey().
                 let decompressed = decompress_pubkey(bytes).unwrap();
 
@@ -456,7 +456,7 @@ impl G1Affine {
         }
 
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 // The add precompile only works when P != Q and P != -Q
                 if self.x != rhs.x {
                     // In this case, we know that P != Q and P != -Q, since both Q and -Q have the same `x` coordinate

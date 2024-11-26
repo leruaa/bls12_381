@@ -8,7 +8,7 @@ use ff::{Field, PrimeField};
 use rand_core::RngCore;
 
 cfg_if! {
-    if #[cfg(target_os = "zkvm")] {
+    if #[cfg(target_vendor = "succinct")] {
         use sp1_lib::sys_bigint;
         use sp1_lib::{io::{hint_slice, read_vec}, unconstrained};
     }
@@ -89,7 +89,7 @@ const MODULUS: Scalar = Scalar([
 ]);
 
 /// The modulus as u32 limbs.
-#[cfg(target_os = "zkvm")]
+#[cfg(target_vendor = "succinct")]
 const MODULUS_LIMBS_32: [u32; 8] = [
     0x0000_0001,
     0xffff_ffff,
@@ -101,7 +101,7 @@ const MODULUS_LIMBS_32: [u32; 8] = [
     0x73ed_a753,
 ];
 
-#[cfg(target_os = "zkvm")]
+#[cfg(target_vendor = "succinct")]
 const R_INV: [u32; 8] = [
     0xfe75_c040,
     0x13f7_5b69,
@@ -392,7 +392,7 @@ impl Scalar {
     #[inline]
     pub fn square(&self) -> Scalar {
         cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut res = *self;
                 res.mul_inp(self);
                 res
@@ -538,7 +538,7 @@ impl Scalar {
     }
 
     pub fn invert(&self) -> CtOption<Self> {
-        #[cfg(target_os = "zkvm")]
+        #[cfg(target_vendor = "succinct")]
         {
             unconstrained! {
                 let mut buf = [0u8; 33];
@@ -558,7 +558,7 @@ impl Scalar {
                 }
             }
         }
-        #[cfg(not(target_os = "zkvm"))]
+        #[cfg(not(target_vendor = "succinct"))]
         {
             self.cpu_invert()
         }
@@ -613,7 +613,7 @@ impl Scalar {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub(crate) fn mul_r_inv_internal(&mut self) {
         unsafe {
             sys_bigint(
@@ -629,7 +629,7 @@ impl Scalar {
     #[inline]
     pub fn mul_inp(&mut self, rhs: &Scalar) {
         cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 unsafe {
                     sys_bigint(
                         self.0.as_mut_ptr() as *mut[u32; 8],
@@ -678,7 +678,7 @@ impl Scalar {
     #[inline]
     pub fn mul(&self, rhs: &Self) -> Self {
         cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut res = *self;
                 res.mul_inp(rhs);
                 res

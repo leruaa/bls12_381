@@ -11,7 +11,7 @@ use crate::util::{adc, mac, sbb};
 
 // Accelerated precompiles for zkvm. Defined directly to prevent circular dependency issues.
 cfg_if! {
-    if #[cfg(target_os = "zkvm")] {
+    if #[cfg(target_vendor = "succinct")] {
         use sp1_lib::{syscall_bls12381_fp_addmod, syscall_bls12381_fp_submod, syscall_bls12381_fp_mulmod };
         use sp1_lib::{io::{hint_slice, read_vec}, unconstrained};
     }
@@ -90,7 +90,7 @@ const MODULUS: [u64; 6] = [
 const INV: u64 = 0x89f3_fffc_fffc_fffd;
 
 /// R_INV = (2^384)^(-1) mod p
-#[cfg(target_os = "zkvm")]
+#[cfg(target_vendor = "succinct")]
 const R_INV: Fp = Fp([
     0xf4d38259380b4820,
     0x7fe11274d898fafb,
@@ -380,7 +380,7 @@ impl Fp {
 
     #[inline]
     pub fn sqrt(&self) -> CtOption<Self> {
-        #[cfg(target_os = "zkvm")]
+        #[cfg(target_vendor = "succinct")]
         {
             // Compute the square root using the zkvm syscall
             unconstrained! {
@@ -402,7 +402,7 @@ impl Fp {
                 }
             }
         }
-        #[cfg(not(target_os = "zkvm"))]
+        #[cfg(not(target_vendor = "succinct"))]
         {
             self.cpu_sqrt()
         }
@@ -425,7 +425,7 @@ impl Fp {
     }
 
     pub fn invert(&self) -> CtOption<Self> {
-        #[cfg(target_os = "zkvm")]
+        #[cfg(target_vendor = "succinct")]
         {
             // Compute the inverse using the zkvm syscall
             unconstrained! {
@@ -447,7 +447,7 @@ impl Fp {
                 }
             }
         }
-        #[cfg(not(target_os = "zkvm"))]
+        #[cfg(not(target_vendor = "succinct"))]
         {
             self.cpu_invert()
         }
@@ -475,7 +475,7 @@ impl Fp {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn add_inp(&mut self, rhs: &Fp) {
         unsafe {
             syscall_bls12381_fp_addmod(
@@ -503,7 +503,7 @@ impl Fp {
     #[inline]
     pub fn add(&self, rhs: &Fp) -> Fp {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp_addmod(out.0.as_mut_ptr() as *mut u32, rhs.0.as_ptr() as *const u32);
@@ -543,7 +543,7 @@ impl Fp {
     #[inline]
     pub fn neg(&self) -> Fp {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = Fp::zero();
                 unsafe {
                     syscall_bls12381_fp_submod(out.0.as_mut_ptr() as *mut u32, self.0.as_ptr() as *const u32);
@@ -556,7 +556,7 @@ impl Fp {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn sub_inp(&mut self, rhs: &Fp) {
         unsafe {
             syscall_bls12381_fp_submod(
@@ -569,7 +569,7 @@ impl Fp {
     #[inline]
     pub fn sub(&self, rhs: &Fp) -> Fp {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp_submod(out.0.as_mut_ptr() as *mut u32, rhs.0.as_ptr() as *const u32);
@@ -591,7 +591,7 @@ impl Fp {
     ///
     /// Uses precompiles to calculate it naively but much more cheaply.
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub(crate) fn sum_of_products<const T: usize>(mut a: [Fp; T], b: [Fp; T]) -> Fp {
         let mut out = Fp::zero();
         for (ai, bi) in a.iter_mut().zip(b.iter()) {
@@ -606,7 +606,7 @@ impl Fp {
     /// Implements Algorithm 2 from Patrick Longa's
     /// [ePrint 2022-367](https://eprint.iacr.org/2022/367) §3.
     #[inline]
-    #[cfg(not(target_os = "zkvm"))]
+    #[cfg(not(target_vendor = "succinct"))]
     pub(crate) fn sum_of_products<const T: usize>(a: [Fp; T], b: [Fp; T]) -> Fp {
         // For a single `a x b` multiplication, operand scanning (schoolbook) takes each
         // limb of `a` in turn, and multiplies it by all of the limbs of `b` to compute
@@ -742,7 +742,7 @@ impl Fp {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn mul_inp(&mut self, rhs: &Fp) {
         unsafe {
             syscall_bls12381_fp_mulmod(
@@ -804,7 +804,7 @@ impl Fp {
     #[inline]
     pub fn mul(&self, rhs: &Fp) -> Fp {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp_mulmod(out.0.as_mut_ptr() as *mut u32, rhs.0.as_ptr() as *const u32);
@@ -821,7 +821,7 @@ impl Fp {
     /// the internal Montgomery form to a plain BigInt form.
     /// Used as a bridge between the internal Montgomery representation and the zkvm precompiles.
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub(crate) fn mul_r_inv_internal(&mut self) {
         unsafe {
             syscall_bls12381_fp_mulmod(
@@ -835,7 +835,7 @@ impl Fp {
     /// a plain BigInt form back to the internal Montgomery form.
     /// Used as a bridge between the internal Montgomery representation and the zkvm precompiles.
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub(crate) fn mul_r_internal(&mut self) {
         unsafe {
             syscall_bls12381_fp_mulmod(self.0.as_mut_ptr() as *mut u32, R.0.as_ptr() as *const u32);
@@ -843,7 +843,7 @@ impl Fp {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn square_inp(&mut self) {
         unsafe {
             syscall_bls12381_fp_mulmod(
@@ -908,7 +908,7 @@ impl Fp {
     #[inline]
     pub fn square(&self) -> Self {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp_mulmod(out.0.as_mut_ptr() as *mut u32, self.0.as_ptr() as *const u32);

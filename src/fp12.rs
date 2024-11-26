@@ -9,7 +9,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 #[cfg(feature = "pairings")]
 use rand_core::RngCore;
 
-#[cfg(target_os = "zkvm")]
+#[cfg(target_vendor = "succinct")]
 use sp1_lib::{
     io::{hint_slice, read_vec},
     unconstrained,
@@ -120,7 +120,7 @@ impl Fp12 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn mul_by_014(&self, c0: &Fp2, c1: &Fp2, c4: &Fp2) -> Fp12 {
         let aa = self.c0.mul_by_01(c0, c1);
         let bb = self.c1.mul_by_1(c4);
@@ -135,7 +135,7 @@ impl Fp12 {
         Fp12 { c0, c1 }
     }
 
-    #[cfg(not(target_os = "zkvm"))]
+    #[cfg(not(target_vendor = "succinct"))]
     pub fn mul_by_014(&self, c0: &Fp2, c1: &Fp2, c4: &Fp2) -> Fp12 {
         let aa = self.c0.mul_by_01(c0, c1);
         let bb = self.c1.mul_by_1(c4);
@@ -169,7 +169,7 @@ impl Fp12 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn mul_inp(&mut self, other: &Fp12) {
         let aa = self.c0 * other.c0;
         let bb = self.c1 * other.c1;
@@ -186,7 +186,7 @@ impl Fp12 {
     #[inline]
     fn mul(&self, other: &Fp12) -> Self {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 out.mul_inp(other);
                 out
@@ -238,7 +238,7 @@ impl Fp12 {
 
     /// Raises this element to p.
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn frobenius_map_inp(&mut self) {
         self.c0.frobenius_map_inp();
         self.c1.frobenius_map_inp();
@@ -271,7 +271,7 @@ impl Fp12 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn square(&self) -> Self {
         let ab = self.c0 * self.c1;
         let mut c0c1 = self.c0;
@@ -286,7 +286,7 @@ impl Fp12 {
     }
 
     #[inline]
-    #[cfg(not(target_os = "zkvm"))]
+    #[cfg(not(target_vendor = "succinct"))]
     pub fn square(&self) -> Self {
         let ab = self.c0 * self.c1;
         let c0c1 = self.c0 + self.c1;

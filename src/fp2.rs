@@ -8,7 +8,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::fp::Fp;
 cfg_if! {
-    if #[cfg(target_os = "zkvm")] {
+    if #[cfg(target_vendor = "succinct")] {
         use sp1_lib::{syscall_bls12381_fp2_addmod, syscall_bls12381_fp2_submod, syscall_bls12381_fp2_mulmod };
         use sp1_lib::{io::{hint_slice, read_vec}, unconstrained};
     }
@@ -181,7 +181,7 @@ impl Fp2 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn mul_by_nonresidue_inp(&mut self) {
         // Multiply a + bu by u + 1, getting
         // au + a + bu^2 + bu
@@ -248,14 +248,14 @@ impl Fp2 {
     /// the internal Montgomery form to a plain BigInt form.
     /// Used as a bridge between the internal Montgomery representation and the zkvm precompiles.
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub(crate) fn mul_r_inv_internal(&mut self) {
         self.c0.mul_r_inv_internal();
         self.c1.mul_r_inv_internal();
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn square_inp(&mut self) {
         unsafe {
             syscall_bls12381_fp2_mulmod(
@@ -292,7 +292,7 @@ impl Fp2 {
 
     pub fn square(&self) -> Fp2 {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp2_mulmod(out.c0.0.as_mut_ptr() as *mut u32, self.c0.0.as_ptr() as *const u32);
@@ -306,7 +306,7 @@ impl Fp2 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn mul_inp(&mut self, rhs: &Fp2) {
         unsafe {
             syscall_bls12381_fp2_mulmod(
@@ -339,7 +339,7 @@ impl Fp2 {
 
     pub fn mul(&self, rhs: &Fp2) -> Fp2 {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp2_mulmod(out.c0.0.as_mut_ptr() as *mut u32, rhs.c0.0.as_ptr() as *const u32);
@@ -353,7 +353,7 @@ impl Fp2 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn add_inp(&mut self, rhs: &Fp2) {
         unsafe {
             syscall_bls12381_fp2_addmod(
@@ -364,7 +364,7 @@ impl Fp2 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn double_inp(&mut self) {
         unsafe {
             syscall_bls12381_fp2_addmod(
@@ -384,7 +384,7 @@ impl Fp2 {
 
     pub fn add(&self, rhs: &Fp2) -> Fp2 {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp2_addmod(out.c0.0.as_mut_ptr() as *mut u32, rhs.c0.0.as_ptr() as *const u32);
@@ -397,7 +397,7 @@ impl Fp2 {
     }
 
     #[inline]
-    #[cfg(target_os = "zkvm")]
+    #[cfg(target_vendor = "succinct")]
     pub fn sub_inp(&mut self, rhs: &Fp2) {
         unsafe {
             syscall_bls12381_fp2_submod(
@@ -418,7 +418,7 @@ impl Fp2 {
 
     pub fn sub(&self, rhs: &Fp2) -> Fp2 {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = self.clone();
                 unsafe {
                     syscall_bls12381_fp2_submod(out.c0.0.as_mut_ptr() as *mut u32, rhs.c0.0.as_ptr() as *const u32);
@@ -443,7 +443,7 @@ impl Fp2 {
 
     pub fn neg(&self) -> Fp2 {
         cfg_if::cfg_if! {
-            if #[cfg(target_os = "zkvm")] {
+            if #[cfg(target_vendor = "succinct")] {
                 let mut out = Fp2::zero();
                 unsafe {
                     syscall_bls12381_fp2_submod(out.c0.0.as_mut_ptr() as *mut u32, self.c0.0.as_ptr() as *const u32);
@@ -512,7 +512,7 @@ impl Fp2 {
 
     #[inline]
     pub fn sqrt(&self) -> CtOption<Self> {
-        // #[cfg(target_os = "zkvm")]
+        // #[cfg(target_vendor = "succinct")]
         // {
         //     // Compute the inverse using the zkvm syscall
         //     unconstrained! {
@@ -534,7 +534,7 @@ impl Fp2 {
         //         }
         //     }
         // }
-        // #[cfg(not(target_os = "zkvm"))]
+        // #[cfg(not(target_vendor = "succinct"))]
         {
             self.cpu_sqrt()
         }
@@ -568,7 +568,7 @@ impl Fp2 {
     }
 
     pub fn invert(&self) -> CtOption<Self> {
-        #[cfg(target_os = "zkvm")]
+        #[cfg(target_vendor = "succinct")]
         {
             // Compute the inverse using the zkvm syscall
             unconstrained! {
@@ -590,7 +590,7 @@ impl Fp2 {
                 }
             }
         }
-        #[cfg(not(target_os = "zkvm"))]
+        #[cfg(not(target_vendor = "succinct"))]
         {
             self.cpu_invert()
         }
