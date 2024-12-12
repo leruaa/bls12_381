@@ -592,7 +592,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp1_bls_12381"
+name = "sp1_bls12_381"
 version = "0.8.0"
 dependencies = [
  "cfg-if",
