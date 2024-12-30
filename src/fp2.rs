@@ -523,6 +523,8 @@ impl Fp2 {
             }
 
             // { c0: 1, c1: 1 }
+            //
+            // This ia non quadratic resiude over Fp2
             let nqr = Self {
                 c0: Fp::from_raw_unchecked([
                     8505329371266088957,
@@ -567,16 +569,23 @@ impl Fp2 {
             let bytes: [u8; 97] = byte_vec.try_into().unwrap();
             match bytes[96] {
                 0 => {
+                    // The hint indicates does not have a square root
+                    //
+                    // We can verify this using the nqr trick.
                     let root = Fp2::from_bytes(&bytes[0..96].try_into().unwrap()).unwrap();
                     let has_root = self * nqr;
 
-                    assert_eq!(root * root, has_root);
+                    assert_eq!(root * root, has_root, "Invalid hint: square root for Fp2");
 
                     CtOption::new(Self::zero(), Choice::from(0u8))
                 }
                 _ => {
+                    // The high byte is non-zero, so we should have a sqrt.
                     let root = Fp2::from_bytes(&bytes[0..96].try_into().unwrap()).unwrap();
-                    CtOption::new(root, (root * root).ct_eq(self))
+
+                    assert_eq!(root * root, *self, "Invalid hint: square root for Fp2 sqrt");
+
+                    CtOption::new(root, Choice::from(1u8))
                 }
             }
         }
@@ -615,12 +624,12 @@ impl Fp2 {
     }
 
     pub fn invert(&self) -> CtOption<Self> {
-        if self.is_zero().into() {
-            return CtOption::new(Fp2::zero(), Choice::from(0u8));
-        }
-
         #[cfg(target_os = "zkvm")]
         {
+            if self.is_zero().into() {
+                return CtOption::new(Fp2::zero(), Choice::from(0u8));
+            }
+
             unconstrained! {
                 // The element was previously checked to be non-zero
                 if let Some(inv) = self.cpu_invert().into_option() {
@@ -636,7 +645,9 @@ impl Fp2 {
             let bytes: [u8; 96] = byte_vec.try_into().unwrap();
             let inv = Fp2::from_bytes(&bytes).unwrap();
 
-            CtOption::new(inv, (self * inv).ct_eq(&Fp2::one()))
+            assert!(*self * inv == Fp2::one(), "Invalid hint: inverse for Fp2");
+
+            CtOption::new(inv, Choice::from(1u8))
         }
 
         #[cfg(not(target_os = "zkvm"))]
