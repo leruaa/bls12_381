@@ -410,17 +410,24 @@ impl Fp {
             }
 
             let byte_vec = read_vec();
-            let bytes: [u8; 49] = byte_vec.try_into().unwrap();
-            match bytes[48] {
+            let status = byte_vec[48];
+
+            // Safety:
+            // - the length of the byte_vec is guaranteed to be 49, since we just pushed it.
+            // - the executor pushes to the front.
+            // - the ref is only cloned from before byte_vec is dropped.
+            let bytes = unsafe { &*(byte_vec.as_ptr() as *const [u8; 48]) };
+
+            match status {
                 0 => {
-                    let root = Fp::from_bytes(&bytes[0..48].try_into().unwrap()).unwrap();
+                    let root = Fp::from_bytes(bytes).unwrap();
 
                     assert!(root * root == *self * nqr, "Invalid hint: Fp sqrt, non-quadratic residue");
 
                     CtOption::new(Fp::zero(), Choice::from(0u8))
                 }
                 _ => {
-                    let root = Fp::from_bytes(&bytes[0..48].try_into().unwrap()).unwrap();
+                    let root = Fp::from_bytes(bytes).unwrap();
 
                     assert!(root * root == *self, "Invalid hint: Fp sqrt");
 
@@ -468,9 +475,14 @@ impl Fp {
             }
 
             let byte_vec = read_vec();
-            let bytes: [u8; 48] = byte_vec.try_into().unwrap();
 
-            let inv = Fp::from_bytes(&bytes).unwrap();
+            // Safety: 
+            // - the length of the byte_vec is guaranteed to be 48, since we just pushed it.
+            // - the executor pushes to the front.
+            // - the ref is only cloned from before byte_vec is dropped.
+            let bytes = unsafe { &*(byte_vec.as_ptr() as *const [u8; 48]) };
+
+            let inv = Fp::from_bytes(bytes).unwrap();
             
             assert!(self * &inv == Fp::one(), "Invalid hint: Fp invert");
 

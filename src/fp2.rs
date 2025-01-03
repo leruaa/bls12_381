@@ -567,8 +567,15 @@ impl Fp2 {
             }
 
             let byte_vec = read_vec();
-            let bytes: [u8; 97] = byte_vec.try_into().unwrap();
-            match bytes[96] {
+            let status = byte_vec[96];
+
+            // Safety:
+            // - the length of the byte_vec is guaranteed to be 97, since we just pushed it.
+            // - the executor pushes to the front.
+            // - the ref is only cloned from before byte_vec is dropped.
+            let bytes = unsafe { &*(byte_vec.as_ptr() as *const [u8; 96]) };
+
+            match status {
                 0 => {
                     // The hint indicates does not have a square root
                     //
@@ -643,8 +650,13 @@ impl Fp2 {
             }
 
             let byte_vec = read_vec();
-            let bytes: [u8; 96] = byte_vec.try_into().unwrap();
-            let inv = Fp2::from_bytes(&bytes).unwrap();
+
+            // Safety: 
+            // - the length of the byte_vec is guaranteed to be 48, since we just pushed it.
+            // - the executor pushes to the front.
+            // - the ref is only cloned from before byte_vec is dropped.
+            let bytes = unsafe { &*(byte_vec.as_ptr() as *const [u8; 96]) };
+            let inv = Fp2::from_bytes(bytes).unwrap();
 
             assert!(*self * inv == Fp2::one(), "Invalid hint: inverse for Fp2");
 
